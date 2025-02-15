@@ -286,9 +286,9 @@ resource "google_compute_instance_template" "tmpl_instance_group_1" {
     network            = google_compute_network.producer_vpc_network.name
     subnetwork         = google_compute_subnetwork.producer_sb_subnet_a.name
     subnetwork_project = data.google_project.producer.project_id
-    access_config {
-      // Ephemeral public IP
-    }
+    # access_config {
+    #   // Ephemeral public IP
+    # }
   }
 
   metadata = {
@@ -369,9 +369,9 @@ resource "google_compute_instance_template" "tmpl_instance_group_2" {
     network            = google_compute_network.producer_vpc_network.name
     subnetwork         = google_compute_subnetwork.producer_sb_subnet_b.name
     subnetwork_project = data.google_project.producer.project_id
-    access_config {
-      // Ephemeral public IP
-    }
+    # access_config {
+    #   // Ephemeral public IP
+    # }
   }
 
   metadata = {
