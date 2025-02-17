@@ -32,7 +32,9 @@ resource "google_project_service" "producer_service" {
   for_each = toset([
     "compute.googleapis.com",
     "servicedirectory.googleapis.com",
-    "dns.googleapis.com"
+    "dns.googleapis.com",
+    "networksecurity.googleapis.com",
+    "certificatemanager.googleapis.com"
   ])
 
   service            = each.key
@@ -53,7 +55,7 @@ resource "google_compute_network" "producer_vpc_network" {
 ####### VPC SUBNETS
 
 resource "google_compute_subnetwork" "producer_sb_subnet_a" {
-  name          = "subnet-a"
+  name          = "${var.sg_prefix}-subnet-a"
   project       = data.google_project.producer.project_id
   ip_cidr_range = "10.10.20.0/24"
   network       = google_compute_network.producer_vpc_network.id
@@ -61,7 +63,7 @@ resource "google_compute_subnetwork" "producer_sb_subnet_a" {
 }
 
 resource "google_compute_subnetwork" "producer_sb_subnet_b" {
-  name          = "subnet-b"
+  name          = "${var.sg_prefix}-subnet-b"
   project       = data.google_project.producer.project_id
   ip_cidr_range = "10.10.40.0/24"
   network       = google_compute_network.producer_vpc_network.id
@@ -69,7 +71,7 @@ resource "google_compute_subnetwork" "producer_sb_subnet_b" {
 }
 
 resource "google_compute_subnetwork" "producer_proxy" {
-  name          = "l7-proxy-subnet"
+  name          = "${var.sg_prefix}-l7-proxy-subnet"
   project       = data.google_project.producer.project_id
   region        = var.region_a
   ip_cidr_range = "10.10.200.0/24"
@@ -83,7 +85,7 @@ resource "google_compute_subnetwork" "producer_proxy" {
 ####### FIREWALL
 
 resource "google_compute_firewall" "producer_fw-allow-internal" {
-  name      = "sg-allow-internal"
+  name      = "${var.sg_prefix}-allow-internal"
   project   = data.google_project.producer.project_id
   network   = google_compute_network.producer_vpc_network.name
   direction = "INGRESS"
@@ -104,7 +106,7 @@ resource "google_compute_firewall" "producer_fw-allow-internal" {
 }
 
 resource "google_compute_firewall" "producer_fw_allow_ssh" {
-  name      = "sg-allow-ssh"
+  name      = "${var.sg_prefix}-allow-ssh"
   project   = data.google_project.producer.project_id
   network   = google_compute_network.producer_vpc_network.name
   direction = "INGRESS"
@@ -117,21 +119,21 @@ resource "google_compute_firewall" "producer_fw_allow_ssh" {
 }
 
 resource "google_compute_firewall" "producer_fw_app_allow_http" {
-  name      = "sg-app-allow-http"
+  name      = "${var.sg_prefix}-app-allow-http"
   project   = data.google_project.producer.project_id
   network   = google_compute_network.producer_vpc_network.name
   direction = "INGRESS"
 
   allow {
     protocol = "tcp"
-    ports    = ["80", "8080"]
+    ports    = ["80", "8080", "443"]
   }
   target_tags   = ["lb-backend"]
   source_ranges = ["0.0.0.0/0"]
 }
 
 resource "google_compute_firewall" "producer_fw_app_allow_health_check" {
-  name      = "sg-app-allow-health-check"
+  name      = "${var.sg_prefix}-app-allow-health-check"
   project   = data.google_project.producer.project_id
   network   = google_compute_network.producer_vpc_network.name
   direction = "INGRESS"
@@ -146,7 +148,7 @@ resource "google_compute_firewall" "producer_fw_app_allow_health_check" {
 #### NAT
 
 resource "google_compute_router" "producer_router_region_a" {
-  name    = "nat-router-region-a"
+  name    = "${var.sg_prefix}-nat-rtr-region-a"
   project = data.google_project.producer.project_id
   network = google_compute_network.producer_vpc_network.id
   region  = var.region_a
@@ -157,7 +159,7 @@ resource "google_compute_router" "producer_router_region_a" {
 }
 
 resource "google_compute_router_nat" "producer_nat_region_a" {
-  name                               = "my-router-nat-region-a"
+  name                               = "${var.sg_prefix}-rtr-nat-region-a"
   project                            = data.google_project.producer.project_id
   router                             = google_compute_router.producer_router_region_a.name
   nat_ip_allocate_option             = "AUTO_ONLY"
@@ -171,7 +173,7 @@ resource "google_compute_router_nat" "producer_nat_region_a" {
 }
 
 resource "google_compute_router" "producer_router_region_b" {
-  name    = "nat-router-region-b"
+  name    = "${var.sg_prefix}-nat-rtr-region-b"
   project = data.google_project.producer.project_id
   network = google_compute_network.producer_vpc_network.id
   region  = var.region_b
@@ -182,7 +184,7 @@ resource "google_compute_router" "producer_router_region_b" {
 }
 
 resource "google_compute_router_nat" "producer_nat_region_b" {
-  name                               = "my-router-nat-region-b"
+  name                               = "${var.sg_prefix}-rtr-nat-region-b"
   project                            = data.google_project.producer.project_id
   router                             = google_compute_router.producer_router_region_b.name
   nat_ip_allocate_option             = "AUTO_ONLY"
